@@ -1,0 +1,9 @@
+{
+  "name": "ThemisProject",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "dependencies": {
+    "ethers": "^6.0.0",
+    "solc": "^0.8.24"
+  }
+}
