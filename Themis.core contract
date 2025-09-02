@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract ThemisCore is ERC721URIStorage, AccessControl, ReentrancyGuard {
+
+    // Roles
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    bytes32 public constant DEVELOPER_ROLE = keccak256("DEVELOPER_ROLE");
+    bytes32 public constant COMMUNITY_ROLE = keccak256("COMMUNITY_ROLE");
+
+    // Wallets
+    address public treasury;
+    address public developer;
+    address public community;
+    address public founder;
+    address public operational;
+
+    // Metadata
+    string public masterCid;
+
+    // Quota structure
+    struct Quota {
+        uint256 dailyCap;
+        uint256 priceFloor;
+        bool enabled;
+    }
+    mapping(bytes32 => Quota) public quotas;
+
+    constructor(
+        address _operational,
+        string memory _masterCid,
+        address _treasury,
+        address _developer,
+        address _community,
+        address _founder
+    ) ERC721("ThemisCoreNFT", "THEMIS") {
+        require(_operational != address(0), "Invalid operational wallet");
+
+        masterCid = _masterCid;
+
+        treasury = _treasury;
+        developer = _developer;
+        community = _community;
+        founder = _founder;
+        operational = _operational;
+
+        _grantRole(DEFAULT_ADMIN_ROLE, founder);
+        _grantRole(OPERATOR_ROLE, operational);
+        _grantRole(DEVELOPER_ROLE, developer);
+        _grantRole(COMMUNITY_ROLE, community);
+    }
+
+    // ===== Quota & Mint Controls =====
+    function setQuota(bytes32 tag, uint256 dailyCap, uint256 priceFloor, bool enabled)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        quotas[tag] = Quota(dailyCap, priceFloor, enabled);
+    }
+
+    function setPublicMintEnabled(bytes32 tag, bool enabled)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        quotas[tag].enabled = enabled;
+    }
+
+    // Safe mint
+    function mint(address to, uint256 tokenId, string memory uri)
+        external
+        onlyRole(OPERATOR_ROLE)
+        nonReentrant
+    {
+        _safeMint(to, tokenId);
+        _setTokenURI(tokenId, uri);
+    }
+
+    // Withdraw funds → always to Treasury
+    function withdraw() external nonReentrant {
+        uint256 bal = address(this).balance;
+        require(bal > 0, "No funds");
+        payable(treasury).transfer(bal);
+    }
+
+    receive() external payable {}
+
+    // Fix for multiple inheritance conflict
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC721URIStorage, AccessControl)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+}
