@@ -1,0 +1,32 @@
+// compile.js — compiles ThemisCore.sol into JSON
+
+const fs = require("fs");
+const solc = require("solc");
+
+// Read Solidity contract
+const source = fs.readFileSync("ThemisCore.sol", "utf8");
+
+const input = {
+  language: "Solidity",
+  sources: {
+    "ThemisCore.sol": { content: source }
+  },
+  settings: {
+    outputSelection: {
+      "*": { "*": ["abi", "evm.bytecode"] }
+    }
+  }
+};
+
+// Compile contract
+const output = JSON.parse(solc.compile(JSON.stringify(input)));
+
+// Extract ABI and bytecode
+const contract = output.contracts["ThemisCore.sol"]["ThemisCore"];
+
+fs.writeFileSync("ThemisCore.json", JSON.stringify({
+  abi: contract.abi,
+  bytecode: contract.evm.bytecode.object
+}, null, 2));
+
+console.log("✅ ThemisCore.json created successfully!");
