@@ -1,0 +1,57 @@
+// Deploy.js for Termux — CommonJS style
+
+const { ethers } = require("ethers");
+const fs = require("fs");
+
+// ====== CONFIGURATION ======
+
+// RPC endpoint (Polygon mainnet)
+const POLYGON_RPC = "https://polygon-mainnet.g.alchemy.com/v2/Lb0ty0LDrMxBJZpSSHstY";
+
+// Founder wallet private key (deploys the contract)
+const PRIVATE_KEY = "YOUR_FOUNDER_PRIVATE_KEY";
+
+// Master CID for NFT metadata
+const MASTER_CID = "YOUR_MASTER_CID";
+
+// Wallets
+const OPERATIONAL_WALLET = "0x8Cbe46A175E9CE3bB9FCF1F739F8C6b37d3308b3";
+const TREASURY_WALLET = "0x56Eddb7aa87536c09CCc2793473599fD21A8b17F";
+const DEV_WALLET = "0x505e71695E9bc45943c58adEC1650577BcA68fD9";
+const COMMUNITY_WALLET = "0x4E3520A5Bbb6213243FDb3e1650C73AEae1D8514";
+const FOUNDER_WALLET = "0x367e50521765fa7DD60536415c58fB198abeE1Da";
+
+// ====== LOAD COMPILED CONTRACT ======
+const contractJson = JSON.parse(fs.readFileSync("./ThemisCore.json", "utf8"));
+const abi = contractJson.abi;
+const bytecode = contractJson.bytecode;
+
+// ====== PROVIDER & WALLET ======
+const provider = new ethers.providers.JsonRpcProvider(POLYGON_RPC);
+const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+
+// ====== DEPLOY FUNCTION ======
+async function main() {
+    console.log("Deploying ThemisCore contract...");
+
+    const factory = new ethers.ContractFactory(abi, bytecode, wallet);
+
+    const contract = await factory.deploy(
+        OPERATIONAL_WALLET,
+        MASTER_CID,
+        TREASURY_WALLET,
+        DEV_WALLET,
+        COMMUNITY_WALLET,
+        FOUNDER_WALLET
+    );
+
+    console.log("Transaction sent. Waiting for confirmation...");
+    await contract.deployed();
+
+    console.log("✅ ThemisCore deployed at:", contract.address);
+}
+
+main().catch((error) => {
+    console.error("Deployment failed:", error);
+    process.exit(1);
+});
